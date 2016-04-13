@@ -33,6 +33,9 @@ module MemDump
         end
         puts "#{count}/#{total} records selected"
 
+        selected_records.each_value do |r|
+            r['addresses'].delete_if { |a| !selected_records.has_key?(a) }
+        end
         selected_records.each_value
     end
 end
