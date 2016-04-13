@@ -1,0 +1,2 @@
+require 'memdump/cli'
+MemDump::CLI.start(ARGV)
