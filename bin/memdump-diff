@@ -1,0 +1,15 @@
+#! /usr/bin/env ruby
+
+require 'pathname'
+require 'memdump/json_dump'
+require 'memdump/diff'
+
+STDOUT.sync = true
+from = MemDump::JSONDump.new(Pathname.new(ARGV[0]))
+to   = MemDump::JSONDump.new(Pathname.new(ARGV[1]))
+records = MemDump.diff(from, to)
+File.open(ARGV[2], 'w') do |io|
+    records.each do |r|
+        io.puts JSON.dump(r)
+    end
+end
