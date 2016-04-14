@@ -2,80 +2,42 @@ require 'set'
 
 module MemDump
     def self.convert_to_gml(dump, io)
-        class_names = Hash.new
-        dump.each_record do |row|
-            if row['type'] == 'CLASS'
-                class_names[row['address']] = row['name']
+        nodes = dump.each_record.map do |row|
+            if row['class_address'] # transformed with replace_class_address_by_name
+                name    = row['class']
+            else
+                name    = row['struct'] || row['root'] || row['type']
             end
+
+            address = row['address'] || row['root']
+            refs = Hash.new
+            if row_refs = row['references']
+                row_refs.each { |r| refs[r] = nil }
+            end
+
+            [address, refs, name]
         end
-
-        squash = Hash[
-            ['ARRAY', nil] => '[]',
-            ['HASH', nil]  => '{}',
-            ['NODE', nil]  => '->',
-            ['STRING', nil]  => '',
-            ['DATA', 'iseq'] => '->'
-        ]
-
-        prune = ['ROOT', 'ARRAY', 'HASH', 'NODE', 'STRING']
 
         io.puts "graph"
         io.puts "["
-        squashed_nodes = Hash.new
-        in_degree = Hash.new(0)
-        nodes = dump.each_record.map do |row|
-            next if row['type'] == 'ROOT'
-
-            class_name = class_names[row['class']] || row['type']
-            if row['name']
-                class_name = "#{row['name']} - #{class_name}"
-            end
-            address = row['address']
-            refs = (row['references'] || Array.new).uniq
-            refs.each do |r|
-                in_degree[r] += 1
-            end
-
-            if squashed_label = squash[[row['type'], row['struct']]]
-                squashed_nodes[address] = [address, refs.uniq, class_name, squashed_label]
-                next
-            end
-            [address, refs, class_name]
-        end
-
-        nodes.each do |address, refs, class_name|
-            next if !address
-            next if in_degree[address] == 0 && refs.empty?
+        known_addresses = Set.new
+        nodes.each do |address, refs, name|
+            known_addresses << address
             io.puts "  node"
             io.puts "  ["
             io.puts "    id #{address}"
-            io.puts "    label \"#{class_name}\""
+            io.puts "    label \"#{name}\""
             io.puts "  ]"
         end
 
         nodes.each do |address, refs, _|
-            next if !address
-
-            stack = Set.new
-            queue = refs.map { |target| [target, ""] }
-            while !queue.empty?
-                target, label = queue.shift
-
-                _, squash_references, _, squash_label = squashed_nodes[target]
-                if squash_references
-                    if !squash_references.empty? && !stack.include?(target)
-                        queue.concat(squash_references.map { |a| [a, label + squash_label] })
-                    end
-                    stack << target
-                    next
-                end
-
+            refs.each do |ref_address, ref_label|
                 io.puts "  edge"
                 io.puts "  ["
                 io.puts "    source #{address}"
-                io.puts "    target #{target}"
-                if !label.empty?
-                    io.puts "    label \"#{label}\""
+                io.puts "    target #{ref_address}"
+                if ref_label
+                    io.puts "    label \"#{ref_label}\""
                 end
                 io.puts "  ]"
             end

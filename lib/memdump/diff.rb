@@ -12,6 +12,7 @@ module MemDump
             address = (r['address'] || r['root'])
             if !from_objects.include?(address)
                 selected_records[address] = r
+                r['only_in_target'] = 1
             else
                 remaining_records << r
             end
@@ -34,7 +35,9 @@ module MemDump
         puts "#{count}/#{total} records selected"
 
         selected_records.each_value do |r|
-            r['addresses'].delete_if { |a| !selected_records.has_key?(a) }
+            if references = r['references']
+                references.delete_if { |a| !selected_records.has_key?(a) }
+            end
         end
         selected_records.each_value
     end
