@@ -116,6 +116,18 @@ module MemDump
                 STDOUT.puts JSON.dump(r)
             end
         end
+
+        desc 'stats DUMP', 'give statistics on the objects present in the dump'
+        def stats(dump)
+            require 'pp'
+            require 'memdump/stats'
+            dump = MemDump::JSONDump.new(Pathname.new(dump))
+            unknown, by_type = MemDump.stats(dump)
+            puts "#{unknown} objects without a known type"
+            by_type.sort_by { |n, v| v }.reverse.each do |n, v|
+                puts "#{n}: #{v}"
+            end
+        end
     end
 end
 
