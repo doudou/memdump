@@ -29,7 +29,9 @@ Or install it yourself as:
 
 ## Creating a memory dump
 
-**Using rbtrace** the memdump command-line tool can connect to a process where
+### Using rbtrace
+
+The memdump command-line tool can connect to a process where
 the [excellent rbtrace](https://github.com/tmm1/rbtrace) has been required. Just
 start your Ruby application with `-r rbtrace`, e.g.
 
@@ -59,23 +61,25 @@ costly from a performance point of view, do
 memdump enable-allocation-trace 1234
 ```
 
-**Manually** it is sometimes more beneficial to do the dumps in specific places
+### Manually
+
+It is sometimes more beneficial to do the dumps in specific places
 in your application, something the rbtrace method does not allow you to do. In
 this case, create memory dumps by calling `ObjectSpace.dump_all`
 
-```
+~~~ ruby
 require 'objspace'
 File.open('/path/to/dump/file', 'w') do |io|
   ObjectSpace.dump_all(output: io)
 end
-```
+~~~
 
 Allocation tracing is enabled with
 
-```
+~~~ ruby
 require 'objspace'
 ObjectSpace.trace_objects_allocation_start
-```
+~~~
 
 ## Analyzing the dump
 
@@ -88,17 +92,17 @@ lot easier.
 memdump replace-class /tmp/mydump
 ```
 
-The most basic analysis is done by running 'stats', which outputs the object
-count by class. For memory leaks, the `diff` command allows you to output the
+The most basic analysis is done by running **stats**, which outputs the object
+count by class. For memory leaks, the **diff** command allows you to output the
 part of the graph that involves new objects (removing the
 "old-and-not-referred-to-by-new")
 
 Beyond that, I usually go back and forth between the memory dump and
-[gephi](http://gephi.org), a graph analysis application. the 'gml' command
+[gephi](http://gephi.org), a graph analysis application. the **gml** command
 allows to convert the memory dump into a graph format that gephi can import.
 From there, use gephi's layouting and filtering algorithms to get an idea of the
-most likely objects. Then, you can "massage" the dump using the `root_of`,
-`subgraph_of` and `remove-node` commands to narrow the dump to its most useful
+most likely objects. Then, you can "massage" the dump using the **root_of**,
+**subgraph_of** and **remove-node** commands to narrow the dump to its most useful
 parts.
 
 ## Contributing
