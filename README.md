@@ -10,6 +10,14 @@ memory leak.
 Processing methods are available as a library, or using the `memdump`
 command-line tool. Just run `memdump help` for a summary of operations.
 
+**NOTE** running memdump under jruby really reduces processing times... If you're using rbenv, just do
+
+```
+rbenv shell jruby-9.0.5.0
+```
+
+in the shell where you run the memdump commands.
+
 ## Installation
 
 Add this line to your application's Gemfile:
