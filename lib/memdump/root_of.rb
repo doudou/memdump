@@ -1,12 +1,17 @@
 module MemDump
     def self.root_of(dump, root_address)
-        selected_records = Hash.new
         remaining_records = Array.new
+        selected_records = Hash.new
+        selected_root = root_address
         dump.each_record do |r|
             address = (r['address'] || r['root'])
-            selected_records[address] = r
+            if selected_root == address
+                selected_records[address] = r
+                selected_root = nil;
+            else
+                remaining_records << r
+            end
         end
-        remaining_records << selected_records.delete(root_address)
 
         count = 0
         while count != selected_records.size
@@ -20,11 +25,10 @@ module MemDump
             end
         end
 
-        selected_records.values.reverse.map do |r|
+        selected_records.values.reverse.each do |r|
             if refs = r['references']
                 refs.delete_if { |a| !selected_records.has_key?(a) }
             end
-            r
         end
     end
 end
