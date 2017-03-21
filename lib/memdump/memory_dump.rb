@@ -469,6 +469,21 @@ module MemDump
 
             without(find_all { |r| to_remove.include?(r['address']) })
         end
+
+        # Compute the set of records that are not in self but are in to
+        #
+        # @param [MemoryDump]
+        # @return [MemoryDump]
+        def diff(to)
+            diff = Hash.new
+            to.each_record do |r|
+                address = r['address']
+                if !@address_to_record.include?(address)
+                    diff[address] = r
+                end
+            end
+            MemoryDump.new(diff)
+        end
     end
 end
 

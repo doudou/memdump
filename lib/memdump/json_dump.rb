@@ -1,8 +1,12 @@
 require 'json'
 module MemDump
     class JSONDump
+        def self.load(filename)
+            new(filename).load
+        end
+
         def initialize(filename)
-            @filename = filename
+            @filename = Pathname(filename)
         end
 
         def each_record

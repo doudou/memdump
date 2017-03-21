@@ -17,17 +17,12 @@ module MemDump
 
         desc 'diff SOURCE TARGET OUTPUT', 'generate a memory dump that contains the objects in TARGET not in SOURCE, and all their parents'
         def diff(source, target, output)
-            require 'memdump/diff'
-
-            STDOUT.sync = true
-            from = MemDump::JSONDump.new(Pathname.new(source))
-            to   = MemDump::JSONDump.new(Pathname.new(target))
-            records = MemDump.diff(from, to)
-            File.open(output, 'w') do |io|
-                records.each do |r|
-                    io.puts JSON.dump(r)
-                end
-            end
+            from = MemDump::JSONDump.load(source)
+            to   = MemDump::JSONDump.load(target)
+            diff = from.diff(to)
+            STDOUT.sync
+            puts "#{diff.size} nodes are in target but not in source"
+            to.roots_of(diff).save(output)
         end
 
         desc 'gml DUMP GML', 'converts a memory dump into a graph in the GML format (for processing by e.g. gephi)'
