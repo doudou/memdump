@@ -307,7 +307,6 @@ module MemDump
                     if path = path_builder.path(record_address)
                         result_nodes.merge(path)
                     end
-                    puts "DONE #{record_i}/#{dump_addresses.size}"
                 end
             end
 
