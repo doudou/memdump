@@ -89,7 +89,7 @@ require 'objspace'
 ObjectSpace.trace_objects_allocations_start
 ~~~
 
-## Analyzing the dump
+## Basic analysis
 
 The first thing you will probably want to do is to run the replace-class command
 on the dump. It replaces the class attribute, which in the original dump is the
@@ -141,6 +141,66 @@ convert the memory dump into a graph format that gephi can import.  From there,
 use gephi's layouting and filtering algorithms to get an idea of the shape of
 the dump. Note that you need to first get a graph smaller than a few 10k of objects
 before you can use gephi.
+
+## Dump diffs
+
+One powerful way to find out where memory is leaked is to look at objects that
+got allocated and find the interface between the long-term objects and these
+objects. memdump supports this by computing diffs.
+
+Let's assume that we have a "before.json" and "after.json" dumps. Start an interactive
+shell loading `before`.
+
+```
+memdump interactive before.json
+```
+
+Then, in the shell, let's load the after dump
+
+```
+> after = MemDump::JSONDump.load('after.json')
+```
+
+The set of objects that are in `after` and `before` is given by `#diff`
+
+```
+> d = diff(after)
+```
+
+That's where things get interesting. From there, the subgraph that holds this
+diff alive is given by `#roots_of`. Since `d` contains objects from `after`, it
+must be computed using `after`
+
+```
+> d_live_graph = after.roots_of(d)
+```
+
+The objects from `before` that are at the border are found using `parents_of`
+
+```
+> before_border = after.parents_of(d, exclude_from_dump: true)
+```
+
+The interface between `before` and `after` (nodes from both dumps that are at
+the border) is found using `interface_with`
+
+```
+> interface = before.interface_with(d)
+```
+
+The interface is interesting for visualization. What one can do is tag all the
+elements of diff, compute the interface, compute the subgraph and export it to
+GML. This way, one can "paint" the after objects at the interface in gephi
+for easier visualization of what keeps the objects alive (look for the
+Appearance window, "Nodes" and "Partition")
+
+```
+> d = diff(after)
+> d = d.map { |r| r['in_after'] = 1; r }
+> interface = interface_with(d)
+> subgraph  = after.roots_of(interface)
+> subgraph.to_gml 'diff.gml'
+```
 
 ## Contributing
 

@@ -73,9 +73,7 @@ module MemDump
 
             address_to_record = Hash.new
             each_record do |r|
-                if result = yield(r)
-                    address_to_record[r['address']] = result
-                end
+                address_to_record[r['address']] = yield(r.dup)
             end
             MemoryDump.new(address_to_record)
         end
@@ -91,7 +89,7 @@ module MemDump
 
             address_to_record = Hash.new
             each_record do |r|
-                if result = yield(r)
+                if result = yield(r.dup)
                     address_to_record[r['address']] = result
                 end
             end
@@ -328,7 +326,7 @@ module MemDump
                 next if !result_nodes.include?(address)
 
                 record = record.dup
-                record['references'] = record['references'] & result_nodes
+                record['references'] = result_nodes & record['references']
                 record
             end
         end
@@ -513,6 +511,26 @@ module MemDump
                 end
             end
             MemoryDump.new(diff)
+        end
+
+        # Compute the interface between self and the other dump, that is the
+        # elements of self that have a child in dump, and the elements of dump
+        # that have a parent in self
+        def interface_with(dump)
+            result = Hash.new
+            each_record do |r|
+                found = false
+                r['references'].each do |addr|
+                    if child = dump.find_by_address(addr)
+                        found = true
+                        result[addr] = child
+                    end
+                end
+                if found
+                    result[r['address']] = r
+                end
+            end
+            MemoryDump.new(result)
         end
 
         def replace_class_id_by_class_name(add_reference_to_class: false)

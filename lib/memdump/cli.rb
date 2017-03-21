@@ -22,7 +22,9 @@ module MemDump
             diff = from.diff(to)
             STDOUT.sync
             puts "#{diff.size} nodes are in target but not in source"
-            to.roots_of(diff).save(output)
+            diff = to.roots_of(diff)
+            puts "#{diff.size} nodes in final dump"
+            diff.save(output)
         end
 
         desc 'gml DUMP GML', 'converts a memory dump into a graph in the GML format (for processing by e.g. gephi)'
