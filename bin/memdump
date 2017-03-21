@@ -1,2 +1,3 @@
+#! /usr/bin/env ruby
 require 'memdump/cli'
 MemDump::CLI.start(ARGV)
