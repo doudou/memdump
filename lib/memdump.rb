@@ -12,7 +12,6 @@ require 'memdump/out_degree'
 require 'memdump/remove_node'
 require 'memdump/replace_class_address_by_name'
 require 'memdump/root_of'
-require 'memdump/stats'
 require 'memdump/subgraph_of'
 
 module MemDump
