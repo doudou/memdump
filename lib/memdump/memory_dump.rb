@@ -125,13 +125,17 @@ module MemDump
         # @param [MemoryDump] the set of entries whose parents we're looking for
         # @param [Integer] min only return the entries in self that refer to
         #   more than this much entries in 'dump'
+        # @param [Boolean] exclude_dump exclude the entries that are already in
+        #   'dump'
         # @return [(MemoryDump,Hash)] the parent entries, and a mapping from
         #   records in the parent entries to the count of entries in 'dump' they
         #   refer to
-        def parents_of(dump, min: 0)
+        def parents_of(dump, min: 0, exclude_dump: false)
             children = dump.addresses.to_set
             counts = Hash.new
             filtered = find_all do |r|
+                next if exclude_dump && children.include?(r['address'])
+
                 count = r['references'].count { |r| children.include?(r) }
                 if count > min
                     counts[r] = count
