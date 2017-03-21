@@ -154,17 +154,18 @@ module MemDump
             end
 
             # Remove references in-between the entries to collapse
+            already_expanded = Hash.new { |h, k| h[k] = Set[k] }
             begin
-                changed_entries = Hash.new
-                already_merged = Hash.new
+                changed_entries  = Hash.new
                 collapsed_entries.each do |address, references|
                     sets = references.classify { |ref_address| collapsed_entries.has_key?(ref_address) }
                     updated_references = sets[false] || Set.new
                     if to_collapse = sets[true]
                         to_collapse.each do |ref_address|
-                            next if ref_address == address
+                            next if already_expanded[address].include?(ref_address)
                             updated_references.merge(collapsed_entries[ref_address])
                         end
+                        already_expanded[address].merge(to_collapse)
                         changed_entries[address] = updated_references
                     end
                 end
