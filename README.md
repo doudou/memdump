@@ -86,7 +86,7 @@ Allocation tracing is enabled with
 
 ~~~ ruby
 require 'objspace'
-ObjectSpace.trace_objects_allocation_start
+ObjectSpace.trace_objects_allocations_start
 ~~~
 
 ## Analyzing the dump
