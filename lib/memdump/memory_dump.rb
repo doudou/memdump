@@ -488,6 +488,10 @@ module MemDump
             end
             MemoryDump.new(diff)
         end
+
+        def replace_class_id_by_class_name(add_reference_to_class: false)
+            MemDump.replace_class_address_by_name(self, add_reference_to_class: add_reference_to_class)
+        end
     end
 end
 

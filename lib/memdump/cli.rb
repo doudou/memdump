@@ -77,13 +77,9 @@ module MemDump
                 if output_path then Pathname.new(output_path)
                 else dump_path
                 end
-            dump = MemDump::JSONDump.new(dump_path)
-            result = MemDump.replace_class_address_by_name(dump, add_reference_to_class: options[:add_ref])
-            output_path.open('w') do |io|
-                result.each do |r|
-                    io.puts JSON.dump(r)
-                end
-            end
+            dump = MemDump::JSONDump.load(dump_path)
+            dump = dump.replace_class_id_by_class_name(add_reference_to_class: options[:add_ref])
+            dump.save(output_path)
         end
 
         desc 'cleanup-refs DUMP OUTPUT', "removes references to deleted objects"

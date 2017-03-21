@@ -27,8 +27,9 @@ module MemDump
             end
         end
 
-        dump.each_record.map do |r|
+        dump.map do |r|
             if klass = r['class']
+                r = r.dup
                 r['class'] = class_names[klass] || klass
                 r['class_address'] = klass
                 if add_reference_to_class
