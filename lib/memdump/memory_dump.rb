@@ -145,13 +145,19 @@ module MemDump
             return filtered, counts
         end
 
-        # Remove these entries from the dump, changing the references so that
-        # the entries parents are pointing to the entrie's children
+        # Remove entries from this dump, keeping the transitivity in the
+        # remaining graph
+        #
+        # @param [MemoryDump] entries entries to remove
+        #
+        # @example remove all entries that are of type HASH
+        #    collapse(objects_of_type('HASH'))
         def collapse(entries)
             collapsed_entries = Hash.new
             entries.each_record do |r|
                 collapsed_entries[r['address']] = r['references'].dup
             end
+
 
             # Remove references in-between the entries to collapse
             already_expanded = Hash.new { |h, k| h[k] = Set[k] }
@@ -282,6 +288,13 @@ module MemDump
             return result, missing
         end
 
+        # Return the graph of object that keeps objects in dump alive
+        #
+        # It contains only the shortest paths from the roots to the objects in
+        # dump
+        #
+        # @param [MemoryDump] dump
+        # @return [MemoryDump]
         def roots_of(dump, root_dump: nil)
             if root_dump && root_dump.empty?
                 raise ArgumentError, "no roots provided"

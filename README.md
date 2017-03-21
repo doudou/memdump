@@ -121,9 +121,19 @@ common collections (Array, Set, Hash) as well as internal bookkeeping objects
 is usually significantly smaller).
 
 After, the usual process is to find out which non-standard classes are
-unexpectedly present in high numbers, extract the objects from these classes
-with `dump = objects_of_class('classname')` and the subgraph that keeps them
-alive with `parents_of(dump)`
+unexpectedly present in high numbers using `stats`, extract the objects from
+these classes with `dump = objects_of_class('classname')` and the subgraph that
+keeps them alive with `roots_of(dump)`
+
+```
+# Get the subgraph of all objects whose class name matches /Plan/ and export
+# it to GML to process with Gephi (see below)
+parent_dump, _ = roots_of(objects_of_class(/Plan/))
+parent_dump.to_gml('plan-subgraph.gml')
+```
+
+Once you start filtering dumps, don't forget to simplify your life by `cd`'ing
+in the context of the newly filtered dumps
 
 Beyond that, I usually go back and forth between the memory dump and
 [gephi](http://gephi.org), a graph analysis application. `to_gml` allows to
