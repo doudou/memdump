@@ -164,42 +164,55 @@ Then, in the shell, let's load the after dump
 The set of objects that are in `after` and `before` is given by `#diff`
 
 ```
-> d = diff(after)
+d = diff(after)
 ```
 
-That's where things get interesting. From there, the subgraph that holds this
-diff alive is given by `#roots_of`. Since `d` contains objects from `after`, it
-must be computed using `after`
+From there, there are multiple cases.
+
+One is that the diff has a few roots. What is happening in this case, is that a
+few objects in the `after` dump are linked to long-live objects in the
+`before` dump). Let's get those
 
 ```
-> d_live_graph = after.roots_of(d)
+roots = d.roots(with_keepalive_count: true)
 ```
 
-The objects from `before` that are at the border are found using `parents_of`
+This computes the set of roots, and computes how many objects in `d` are kept alive by them. This information is stored in each record's `keepalive_count` entry, e.g.
 
 ```
-> before_border = after.parents_of(d, exclude_from_dump: true)
+roots.each_record do |r|
+  puts r['keepalive_count']
+end
 ```
 
-The interface between `before` and `after` (nodes from both dumps that are at
-the border) is found using `interface_with`
+Let's now keep only the roots that keep a significant number of other objects.
+Use `roots.each_record.map { |r| r['keepalive_count'] }.sort.reverse` to get an
+idea of the distribution
 
 ```
-> interface = before.interface_with(d)
+roots = roots.find_all { |r| r['keepalive_count'] > 5000 }
 ```
 
-The interface is interesting for visualization. What one can do is tag all the
-elements of diff, compute the interface, compute the subgraph and export it to
-GML. This way, one can "paint" the after objects at the interface in gephi
-for easier visualization of what keeps the objects alive (look for the
-Appearance window, "Nodes" and "Partition")
+And lets also mark them as being "inside the after dump", which helps visualization in Gephi
 
 ```
-> d = diff(after)
-> d = d.map { |r| r['in_after'] = 1; r }
-> interface = interface_with(d)
-> subgraph  = after.roots_of(interface)
-> subgraph.to_gml 'diff.gml'
+roots = roots.map { |r| r['in_after'] = 1; r }
+```
+
+We can now generate the subgraph and dump it to GML for display
+
+```
+after.roots_of(roots).to_gml('diff.gml')
+```
+
+In summary
+
+```
+d = diff(after)
+roots = d.roots(with_keepalive_count: true)
+roots = roots.map { |r| r['in_after'] = 1; r }
+roots = roots.find_all { |r| r['keepalive_count'] > 5000 }
+after.roots_of(roots).to_gml('diff.gml')
 ```
 
 ## Contributing

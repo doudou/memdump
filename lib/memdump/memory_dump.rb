@@ -73,7 +73,7 @@ module MemDump
 
             address_to_record = Hash.new
             each_record do |r|
-                address_to_record[r['address']] = yield(r.dup)
+                address_to_record[r['address']] = yield(r.dup).to_hash
             end
             MemoryDump.new(address_to_record)
         end
@@ -90,7 +90,7 @@ module MemDump
             address_to_record = Hash.new
             each_record do |r|
                 if result = yield(r.dup)
-                    address_to_record[r['address']] = result
+                    address_to_record[r['address']] = result.to_hash
                 end
             end
             MemoryDump.new(address_to_record)
@@ -325,6 +325,9 @@ module MemDump
                 address = record['address']
                 next if !result_nodes.include?(address)
 
+                # Prefer records in 'dump' to allow for annotations in the
+                # source
+                record = dump.find_by_address(address) || record
                 record = record.dup
                 record['references'] = result_nodes & record['references']
                 record
@@ -394,6 +397,11 @@ module MemDump
             return forward_graph, backward_graph
         end
 
+        def depth_first_visit(root, &block)
+            ensure_graphs_computed
+            @forward_graph.depth_first_visit(root, &block)
+        end
+
         # Validate that all reference entries have a matching dump entry
         #
         # @raise [RuntimeError] if references have been found
@@ -441,11 +449,40 @@ module MemDump
         end
 
         # Returns the set of roots
-        def roots
-            roots = self.roots
-            find_all do |r|
-                roots.include?(r['address'])
+        def roots(with_keepalive_count: false)
+            result = Hash.new
+            self.root_addresses.each do |addr|
+                record = find_by_address(addr)
+                if with_keepalive_count
+                    record = record.dup
+                    count = 0
+                    depth_first_visit(addr) { count += 1 }
+                    record['keepalive_count'] = count
+                end
+                result[addr] = record
             end
+            MemoryDump.new(result)
+        end
+
+        def add_children(roots, with_keepalive_count: false)
+            result = Hash.new
+            roots.each_record do |root_record|
+                result[root_record['address']] = root_record
+
+                root_record['references'].each do |addr|
+                    ref_record = find_by_address(addr)
+                    next if !ref_record
+
+                    if with_keepalive_count
+                        ref_record = ref_record.dup
+                        count = 0
+                        depth_first_visit(addr) { count += 1 }
+                        ref_record['keepalive_count'] = count
+                    end
+                    result[addr] = ref_record
+                end
+            end
+            MemoryDump.new(result)
         end
 
         # Remove all components that are smaller than the given number of nodes
@@ -518,11 +555,14 @@ module MemDump
         # that have a parent in self
         def interface_with(dump)
             result = Hash.new
+            dump_border = Hash.new
             each_record do |r|
                 found = false
                 r['references'].each do |addr|
                     if child = dump.find_by_address(addr)
                         found = true
+                        child = child.dup
+                        dump_border[addr] = child
                         result[addr] = child
                     end
                 end
@@ -530,6 +570,14 @@ module MemDump
                     result[r['address']] = r
                 end
             end
+
+            dump.ensure_graphs_computed
+            dump_border.each do |addr, record|
+                count = 0
+                dump.depth_first_visit(addr) { |obj| count += 1 }
+                record['keepalive_count'] = count
+            end
+
             MemoryDump.new(result)
         end
 

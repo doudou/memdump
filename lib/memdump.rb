@@ -1,5 +1,6 @@
 require 'rgl/adjacency'
 require 'rgl/dijkstra'
+require 'rgl/traversal'
 
 require "memdump/version"
 require 'memdump/json_dump'
