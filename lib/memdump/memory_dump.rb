@@ -474,6 +474,19 @@ module MemDump
             without(find_all { |r| to_remove.include?(r['address']) })
         end
 
+        def stats
+            unknown_class = 0
+            by_class = Hash.new(0)
+            each_record do |r|
+                if klass = (r['class'] || r['type'] || r['root'])
+                    by_class[klass] += 1
+                else
+                    unknown_class += 1
+                end
+            end
+            return unknown_class, by_class
+        end
+
         # Compute the set of records that are not in self but are in to
         #
         # @param [MemoryDump]
