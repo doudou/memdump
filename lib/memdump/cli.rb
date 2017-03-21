@@ -1,6 +1,6 @@
 require 'thor'
 require 'pathname'
-require 'memdump/json_dump'
+require 'memdump'
 
 module MemDump
     class CLI < Thor
@@ -127,6 +127,32 @@ module MemDump
             by_type.sort_by { |n, v| v }.reverse.each do |n, v|
                 puts "#{n}: #{v}"
             end
+        end
+
+        desc 'out_degree DUMP', 'display the direct count of objects held by each object in the dump'
+        option "min", desc: "hide the objects whose degree is lower than this",
+            type: :numeric
+        def out_degree(dump)
+            dump = MemDump::JSONDump.new(Pathname.new(dump))
+            min = options[:min] || 0
+            sorted = dump.each_record.sort_by { |r| (r['references'] || Array.new).size }
+            sorted.each do |r|
+                size = (r['references'] || Array.new).size
+                break if size > min
+                puts "#{size} #{r}"
+            end
+        end
+
+        desc 'interactive DUMP', 'loads a dump file and spawn a pry shell'
+        option :load, desc: 'load the whole dump in memory', type: :boolean, default: true
+        def interactive(dump)
+            require 'memdump'
+            require 'pry'
+            dump = MemDump::JSONDump.new(Pathname.new(dump))
+            if options[:load]
+                dump = dump.load
+            end
+            dump.pry
         end
     end
 end

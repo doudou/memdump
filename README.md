@@ -105,13 +105,32 @@ count by class. For memory leaks, the **diff** command allows you to output the
 part of the graph that involves new objects (removing the
 "old-and-not-referred-to-by-new")
 
+Beyond, this analyzing the dump is best done through the interactive mode:
+
+```
+memdump interactive /tmp/mydump
+```
+
+will get you a pry shell in the context of the loaded MemoryDump object. Use
+the MemoryDump API to filter out what you need. If you're dealing with big dumps,
+it is usually a good idea to save them regularly with `#dump`.
+
+One useful call to do at the beginning is #common_cleanup. It collapses the
+common collections (Array, Set, Hash) as well as internal bookkeeping objects
+(ICLASS, …). I usually run this, save the result and re-load the result (which
+is usually significantly smaller).
+
+After, the usual process is to find out which non-standard classes are
+unexpectedly present in high numbers, extract the objects from these classes
+with `dump = objects_of_class('classname')` and the subgraph that keeps them
+alive with `parents_of(dump)`
+
 Beyond that, I usually go back and forth between the memory dump and
-[gephi](http://gephi.org), a graph analysis application. the **gml** command
-allows to convert the memory dump into a graph format that gephi can import.
-From there, use gephi's layouting and filtering algorithms to get an idea of the
-most likely objects. Then, you can "massage" the dump using the **root_of**,
-**subgraph_of** and **remove-node** commands to narrow the dump to its most useful
-parts.
+[gephi](http://gephi.org), a graph analysis application. `to_gml` allows to
+convert the memory dump into a graph format that gephi can import.  From there,
+use gephi's layouting and filtering algorithms to get an idea of the shape of
+the dump. Note that you need to first get a graph smaller than a few 10k of objects
+before you can use gephi.
 
 ## Contributing
 

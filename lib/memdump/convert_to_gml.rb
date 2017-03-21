@@ -1,47 +1,37 @@
-require 'set'
-
 module MemDump
     def self.convert_to_gml(dump, io)
-        nodes = dump.each_record.map do |row|
-            if row['class_address'] # transformed with replace_class_address_by_name
-                name    = row['class']
-            else
-                name    = row['struct'] || row['root'] || row['type']
-            end
-
-            address = row['address'] || row['root']
-            refs = Hash.new
-            if row_refs = row['references']
-                row_refs.each { |r| refs[r] = nil }
-            end
-
-            [address, refs, name]
-        end
-
         io.puts "graph"
         io.puts "["
-        known_addresses = Set.new
-        nodes.each do |address, refs, name|
-            known_addresses << address
+
+        edges = []
+        dump.each_record do |row|
+            address = row['address']
+
             io.puts "  node"
             io.puts "  ["
             io.puts "    id #{address}"
-            io.puts "    label \"#{name}\""
+            row.each do |key, value|
+                if value.respond_to?(:to_str)
+                    io.puts "    #{key} \"#{value}\""
+                elsif value.kind_of?(Numeric)
+                    io.puts "    #{key} #{value}"
+                end
+            end
+            io.puts "  ]"
+
+            row['references'].each do |ref_address|
+                edges << address << ref_address
+            end
+        end
+
+        edges.each_slice(2) do |address, ref_address|
+            io.puts "  edge"
+            io.puts "  ["
+            io.puts "    source #{address}"
+            io.puts "    target #{ref_address}"
             io.puts "  ]"
         end
 
-        nodes.each do |address, refs, _|
-            refs.each do |ref_address, ref_label|
-                io.puts "  edge"
-                io.puts "  ["
-                io.puts "    source #{address}"
-                io.puts "    target #{ref_address}"
-                if ref_label
-                    io.puts "    label \"#{ref_label}\""
-                end
-                io.puts "  ]"
-            end
-        end
         io.puts "]"
     end
 end
