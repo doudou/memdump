@@ -268,7 +268,8 @@ module MemDump
         def common_cleanup
             to_collapse = find_all do |r|
                 COMMON_COLLAPSE_CLASSES.include?(r['class']) ||
-                    COMMON_COLLAPSE_TYPES.include?(r['type'])
+                    COMMON_COLLAPSE_TYPES.include?(r['type']) ||
+                    r['method'] == 'dump_all'
             end
             collapse(to_collapse)
         end
