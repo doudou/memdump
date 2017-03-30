@@ -493,6 +493,10 @@ module MemDump
             MemoryDump.new(result)
         end
 
+        def dup
+            find_all { true }
+        end
+
         # Simply remove the given objects
         def remove(objects)
             removed_addresses = objects.addresses.to_set
@@ -577,35 +581,81 @@ module MemDump
         # elements of self that have a child in dump, and the elements of dump
         # that have a parent in self
         def interface_with(dump)
-            result = Hash.new
+            self_border = Hash.new
             dump_border = Hash.new
             each_record do |r|
-                found = false
-                r['references'].each do |addr|
-                    if child = dump.find_by_address(addr)
-                        found = true
-                        child = child.dup
-                        dump_border[addr] = child
-                        result[addr] = child
+                next if dump.find_by_address(r['address'])
+
+                refs_in_dump = r['references'].map do |addr|
+                    dump.find_by_address(addr)
+                end.compact
+
+                if !refs_in_dump.empty?
+                    self_border[r['address']] = r
+                    refs_in_dump.each do |child|
+                        dump_border[child['address']] = child.dup
                     end
                 end
-                if found
-                    result[r['address']] = r
+            end
+
+            self_border = MemoryDump.new(self_border)
+            dump_border = MemoryDump.new(dump_border)
+
+            dump.update_keepalive_count(dump_border)
+            return self_border, dump_border
+        end
+
+        # Replace all objects in dump by a single "group" object
+        def group(name, dump, attributes = Hash.new)
+            group_addresses   = Set.new
+            group_references  = Set.new
+            dump.each_record do |r|
+                group_addresses << r['address']
+                group_references.merge(r['references'])
+            end
+            group_record = attributes.dup
+            group_record['address']    = name
+            group_record['references'] = group_references - group_addresses
+
+            updated = Hash[name => group_record]
+            each_record do |record|
+                next if group_addresses.include?(record['address'])
+
+                updated_record = record.dup
+                updated_record['references'] -= group_addresses
+                if updated_record['references'].size != record['references'].size
+                    updated_record['references'] << name
                 end
+
+                if group_addresses.include?(updated_record['class_address'])
+                    updated_record['class_address'] = name
+                end
+                if group_addresses.include?(updated_record['class'])
+                    updated_record['class'] = name
+                end
+
+                updated[updated_record['address']] = updated_record
             end
 
-            dump.ensure_graphs_computed
-            dump_border.each do |addr, record|
+            MemoryDump.new(updated)
+        end
+
+        def update_keepalive_count(dump)
+            ensure_graphs_computed
+            dump.each_record do |record|
                 count = 0
-                dump.depth_first_visit(addr) { |obj| count += 1 }
+                dump.depth_first_visit(record['address']) { |obj| count += 1 }
                 record['keepalive_count'] = count
+                record
             end
-
-            MemoryDump.new(result)
         end
 
         def replace_class_id_by_class_name(add_reference_to_class: false)
             MemDump.replace_class_address_by_name(self, add_reference_to_class: add_reference_to_class)
+        end
+
+        def to_s
+            "#<MemoryDump size=#{size}>"
         end
     end
 end
