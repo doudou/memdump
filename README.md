@@ -148,6 +148,10 @@ One powerful way to find out where memory is leaked is to look at objects that
 got allocated and find the interface between the long-term objects and these
 objects. memdump supports this by computing diffs.
 
+If you mean to use dump diffs you **MUST** enable allocation tracing. Not doing
+so will make the diffs inaccurate, as memdump will not be able to recognize that some
+object addresses have been reused after a garbage collection.
+
 Let's assume that we have a "before.json" and "after.json" dumps. Start an interactive
 shell loading `before`.
 
@@ -167,52 +171,53 @@ The set of objects that are in `after` and `before` is given by `#diff`
 d = diff(after)
 ```
 
-From there, there are multiple cases.
-
-One is that the diff has a few roots. What is happening in this case, is that a
-few objects in the `after` dump are linked to long-live objects in the
-`before` dump). Let's get those
+We'll also add a special marker to the records in `d` so that we can easily colorize
+them differently in Gephi.
 
 ```
-roots = d.roots(with_keepalive_count: true)
+d = d.map { |r| r['in_after'] = 1; r }
 ```
 
-This computes the set of roots, and computes how many objects in `d` are kept alive by them. This information is stored in each record's `keepalive_count` entry, e.g.
+## Case 1: few new objects are linked to the old ones
+
+One possibility is that there are only a few objects in the diff that are kept
+alive from `before`. These objects in turn keep alive a lot more objects (which
+cause the noticeable memory leak). What's interesting in this case is to
+visualize the interface, that is that set of objects.
+
+In memdump, one computes it with the `interface_with` method, which computes the
+interface between the receiver and the argument. The receiver must contain the
+edges between itself and the argument, which means in our case that we must use
+`after`.
 
 ```
-roots.each_record do |r|
-  puts r['keepalive_count']
-end
+self_border, diff_border = after.interface_with(d)
 ```
 
-Let's now keep only the roots that keep a significant number of other objects.
-Use `roots.each_record.map { |r| r['keepalive_count'] }.sort.reverse` to get an
-idea of the distribution
+In addition to computing the border, it computes the count of objects that are
+kept alive by each object in `diff_border`.  It's usually a good idea to
+visualize the distribution of `keepalive_count` to see whether there's indeed
+only a few nodes, and whether some are keeping a lot more objects alive than
+others. Note that cycles that involve more than one "border node" will be
+counted multiple ones (so the sum of `keepalive_count` will be higher than
+`d.size`)
 
 ```
-roots = roots.find_all { |r| r['keepalive_count'] > 5000 }
+diff_border.size # is this much smaller than d.size ?
+diff_border.each_record.map { |r| r['keepalive_count'] }.sort.reverse # are there some high counts at the top ?
 ```
 
-And lets also mark them as being "inside the after dump", which helps visualization in Gephi
+From there, one needs to do a bunch of back-and-forth between memdump and Gephi.
+What I usually do is start by dumping the whole subgraph that contains the border
+and visualize. If I can't make any sense of it, I isolate the high-count elements
+in the border and visualize the related subgraph
 
 ```
-roots = roots.map { |r| r['in_after'] = 1; r }
-```
-
-We can now generate the subgraph and dump it to GML for display
-
-```
-after.roots_of(roots).to_gml('diff.gml')
-```
-
-In summary
-
-```
-d = diff(after)
-roots = d.roots(with_keepalive_count: true)
-roots = roots.map { |r| r['in_after'] = 1; r }
-roots = roots.find_all { |r| r['keepalive_count'] > 5000 }
-after.roots_of(roots).to_gml('diff.gml')
+full_subgraph = after.roots_of(d)
+full_subgraph.to_gml 'full.gml'
+filtered_border = diff_border.find_all { |r| r['keepalive_count'] > 1000 }
+filtered_subgraph = after.roots_of(filtered_subgraph)
+filtered_subgraph.to_gml 'filtered.gml'
 ```
 
 ## Contributing

@@ -233,7 +233,13 @@ module MemDump
             if io_or_path.kind_of?(IO)
                 each_record do |r|
                     r = r.dup
-                    r['references'] = r['references'].to_a
+                    r['address'] = r['address'].gsub(/:\d+$/, '')
+                    if r['class_address']
+                        r['class_address'] = r['class_address'].gsub(/:\d+$/, '')
+                    elsif r['address']
+                        r['address'] = r['address'].gsub(/:\d+$/, '')
+                    end
+                    r['references'] = r['references'].map { |ref_addr| ref_addr.gsub(/:\d+$/, '') }
                     io_or_path.puts JSON.dump(r)
                 end
                 nil

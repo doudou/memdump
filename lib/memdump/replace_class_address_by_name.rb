@@ -6,7 +6,7 @@ module MemDump
         dump.each_record do |row|
             if row['type'] == 'CLASS' || row['type'] == 'MODULE'
                 class_names[row['address']] = row['name']
-            elsif row['type'] == 'ICLASS'
+            elsif row['type'] == 'ICLASS' || row['type'] == "IMEMO"
                 iclasses[row['address']] = row
             end
         end
@@ -20,7 +20,7 @@ module MemDump
                     r['class'] = class_name
                     r['class_address'] = klass
                     if add_reference_to_class
-                        (r['references'] ||= Array.new) << klass
+                        (r['references'] ||= Set.new) << klass
                     end
                     true
                 end
@@ -33,7 +33,7 @@ module MemDump
                 r['class'] = class_names[klass] || klass
                 r['class_address'] = klass
                 if add_reference_to_class
-                    (r['references'] ||= Array.new) << klass
+                    (r['references'] ||= Set.new) << klass
                 end
             end
             r
