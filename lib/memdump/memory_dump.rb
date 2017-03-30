@@ -250,8 +250,8 @@ module MemDump
             end
         end
 
-        COMMON_COLLAPSE_TYPES = %w{IMEMO}
-        COMMON_COLLAPSE_CLASSES = %w{Array Hash Set RubyVM::Env}
+        COMMON_COLLAPSE_TYPES = %w{IMEMO HASH ARRAY}
+        COMMON_COLLAPSE_CLASSES = %w{Set RubyVM::Env}
 
         # Perform common initial cleanup
         #
