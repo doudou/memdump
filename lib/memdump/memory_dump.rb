@@ -266,12 +266,13 @@ module MemDump
         #
         # @return [MemDump] the filtered dump
         def common_cleanup
-            to_collapse = find_all do |r|
+            without_weakrefs = remove(objects_of_class 'WeakRef')
+            to_collapse = without_weakrefs.find_all do |r|
                 COMMON_COLLAPSE_CLASSES.include?(r['class']) ||
                     COMMON_COLLAPSE_TYPES.include?(r['type']) ||
                     r['method'] == 'dump_all'
             end
-            collapse(to_collapse)
+            without_weakrefs.collapse(to_collapse)
         end
 
         # Remove entries in the reference for which we can't find an object with
@@ -490,6 +491,21 @@ module MemDump
                 end
             end
             MemoryDump.new(result)
+        end
+
+        # Simply remove the given objects
+        def remove(objects)
+            removed_addresses = objects.addresses.to_set
+            return dup if removed_addresses.empty?
+
+            find_and_map do |r|
+                if !removed_addresses.include?(r['address'])
+                    references = r['references'].dup
+                    references.delete_if { |a| removed_addresses.include?(a) }
+                    r['references'] = references
+                    r
+                end
+            end
         end
 
         # Remove all components that are smaller than the given number of nodes
