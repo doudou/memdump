@@ -86,7 +86,7 @@ Allocation tracing is enabled with
 
 ~~~ ruby
 require 'objspace'
-ObjectSpace.trace_objects_allocations_start
+ObjectSpace.trace_object_allocations_start
 ~~~
 
 ## Basic analysis
@@ -195,7 +195,9 @@ self_border, diff_border = after.interface_with(d)
 ```
 
 In addition to computing the border, it computes the count of objects that are
-kept alive by each object in `diff_border`.  It's usually a good idea to
+kept alive by each object in `diff_border`. Each record in `diff_border` has an
+attribute called `keepalive_count` that counts the amount of nodes in `after`
+that are reachable (i.e. kept alive by) it. It is usually a good idea to
 visualize the distribution of `keepalive_count` to see whether there's indeed
 only a few nodes, and whether some are keeping a lot more objects alive than
 others. Note that cycles that involve more than one "border node" will be
@@ -213,10 +215,10 @@ and visualize. If I can't make any sense of it, I isolate the high-count element
 in the border and visualize the related subgraph
 
 ```
-full_subgraph = after.roots_of(d)
+full_subgraph = after.roots_of(diff_border)
 full_subgraph.to_gml 'full.gml'
 filtered_border = diff_border.find_all { |r| r['keepalive_count'] > 1000 }
-filtered_subgraph = after.roots_of(filtered_subgraph)
+filtered_subgraph = after.roots_of(filtered_border)
 filtered_subgraph.to_gml 'filtered.gml'
 ```
 
