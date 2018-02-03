@@ -1,3 +1,4 @@
+require 'pathname'
 require 'json'
 module MemDump
     class JSONDump
